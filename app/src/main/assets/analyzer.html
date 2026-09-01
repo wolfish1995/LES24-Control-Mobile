@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LES24 Log Analyzer</title>
+  <style>
+    :root {
+      --brand: #3b82f6;
+      --brand-strong: #60a5fa;
+      --ble: #a78bfa;
+      --sta: #94a3b8;
+      --bg: #0b0f14;
+      --card: #101720;
+      --card-2: #0d141d;
+      --line: #223044;
+      --muted: #8ea1b5;
+      --text: #e4edf6;
+      --soft: #151f2b;
+      --success: #4ade80;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, Arial, Helvetica, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    .app {
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 18px;
+      display: grid;
+      gap: 16px;
+    }
+    .hero {
+      border: 1px solid #20324a;
+      background: linear-gradient(135deg, #101a28 0%, #14243a 58%, #10243a 100%);
+      color: var(--text);
+      border-radius: 16px;
+      padding: 18px 20px;
+      box-shadow: 0 8px 30px rgba(0,0,0,.20);
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .hero h1 { margin: 5px 0 0; font-size: 22px; }
+    .hero small { letter-spacing: .24em; text-transform: uppercase; color: #7190b2; opacity: 1; }
+    .hero p { max-width: 900px; line-height: 1.55; color: var(--muted); opacity: 1; }
+    .chip-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: start; }
+    .hero-chip, .chip {
+      color: #afc1d3;
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: 13px;
+      border: 1px solid rgba(255,255,255,.18);
+      background: rgba(255,255,255,.10);
+      white-space: nowrap;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      box-shadow: 0 8px 26px rgba(0,0,0,.16);
+      overflow: hidden;
+    }
+    .card-header {
+      padding: 22px 24px 0;
+    }
+    .card-title {
+      font-size: 22px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .card-body {
+      padding: 20px 24px 24px;
+      display: grid;
+      gap: 18px;
+    }
+    .toolbar-row, .controls-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    button, .button {
+      border: 1px solid var(--line);
+      background: #151f2b;
+      color: var(--text);
+      border-radius: 18px;
+      padding: 11px 16px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: .15s ease;
+    }
+    button:hover { background: #1c2a39; border-color: #35506d; }
+    .button-primary {
+      background: var(--brand);
+      color: white;
+      border-color: var(--brand);
+    }
+    .button-primary:hover { filter: brightness(.96); }
+    .button-brand-outline {
+      color: var(--brand-strong);
+      border-color: rgba(96,165,250,.26);
+    }
+    .button-brand-outline:hover { background: rgba(59,130,246,.10); }
+    .button-active {
+      background: var(--brand);
+      color: white;
+      border-color: var(--brand);
+    }
+    input[type="text"] {
+      width: 100%;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background: #0d141d;
+      padding: 12px 14px;
+      font-size: 14px;
+      color: var(--text);
+    }
+    .search-wrap {
+      flex: 1 1 420px;
+      min-width: 260px;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .metric {
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: 16px;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      background: #0e1620;
+    }
+    .metric .label { color: var(--muted); font-size: 14px; }
+    .metric .value { color: var(--brand); font-size: 34px; font-weight: 700; margin-top: 4px; }
+    .metric .helper { color: #70849a; font-size: 12px; margin-top: 4px; }
+    .iconbox {
+      width: 44px; height: 44px; border-radius: 16px;
+      background: rgba(59,130,246,.12);
+      display: grid; place-items: center; color: var(--brand);
+      font-weight: 700; font-size: 13px;
+      flex: 0 0 auto;
+    }
+    .hint {
+      border: 1px solid var(--line);
+      background: var(--soft);
+      border-radius: 20px;
+      padding: 12px 14px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .graph-shell {
+      padding: 18px 20px 22px;
+      display: grid;
+      gap: 14px;
+    }
+    .graph-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: start;
+    }
+    .graph-title { font-size: 22px; font-weight: 700; }
+    .graph-subtitle { color: var(--muted); font-size: 14px; margin-top: 6px; }
+    .viewport-controls {
+      display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+    }
+    .viewport-wrap {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      overflow: auto;
+      background: radial-gradient(circle at center, #121c28 0%, #0d151f 58%, #080d13 100%);
+      cursor: grab;
+      min-height: 600px;
+    }
+    .viewport-wrap.dragging { cursor: grabbing; }
+    svg { display: block; width: 100%; min-width: 1100px; }
+    .tabs {
+      display: flex; gap: 8px; flex-wrap: wrap;
+      border: 1px solid #25364a;
+      padding: 4px; border-radius: 18px; width: fit-content;
+      background: #0d141d;
+    }
+    .tab-btn {
+      border-radius: 14px; padding: 10px 14px; border: none; background: transparent;
+    }
+    .tab-btn.active { background: var(--brand); color: white; }
+    .table-shell {
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      overflow: hidden;
+      background: #0d141d;
+    }
+    .table-head, .table-row {
+      display: grid;
+      grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+      gap: 0;
+    }
+    .table-head {
+      background: var(--soft);
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      padding: 12px 16px;
+    }
+    .table-row {
+      padding: 12px 16px;
+      border-top: 1px solid #1a2635;
+      font-size: 14px;
+      color: #c9d6e3;
+    }
+    .table-scroll { max-height: 380px; overflow: auto; }
+    .muted { color: var(--muted); }
+    .section-hidden { display: none; }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      background: rgba(59,130,246,.12);
+      color: var(--brand);
+      border: 1px solid rgba(96,165,250,.22);
+    }
+    .row-2 {
+      display: grid; gap: 24px;
+    }
+    .empty {
+      padding: 50px 16px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    @media (max-width: 1100px) {
+      .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 720px) {
+      .app { padding: 14px; }
+      .hero { padding: 20px; }
+      .card-header { padding: 18px 18px 0; }
+      .card-body, .graph-shell { padding: 18px; }
+      .stats-grid { grid-template-columns: 1fr; }
+    }
+
+    .card-body > .toolbar-row { display: none; }
+
+    #liveBridgeBadge {
+      color: #7df0ad;
+      background: rgba(34,197,94,.09);
+      border-color: rgba(74,222,128,.28);
+      font-weight: 800;
+      letter-spacing: .04em;
+    }
+    .metric {
+      transition: border-color .15s ease, transform .15s ease;
+    }
+    .metric:hover {
+      border-color: #314863;
+      transform: translateY(-1px);
+    }
+    .table-row:hover {
+      background: #121d29;
+    }
+    input[type="text"]::placeholder {
+      color: #60758b;
+    }
+
+  </style>
+</head>
+<body>
+  <div class="app">
+<section class="card">
+      <div class="card-header">
+        <div class="card-title">Сеанс и фильтры</div>
+      </div>
+      <div class="card-body">
+        <div class="toolbar-row">
+          <button id="openBtn" class="button-primary">Открыть лог</button>
+          <button id="sampleBtn" class="button-brand-outline">Демо</button>
+          <input id="fileInput" type="file" accept=".xml,.txt,.log" hidden />
+        </div>
+
+        <div class="stats-grid">
+          <div class="metric"><div><div class="label">AP</div><div id="metricAp" class="value">0</div><div class="helper">точки доступа</div></div><div class="iconbox">AP</div></div>
+          <div class="metric"><div><div class="label">STA</div><div id="metricSta" class="value">0</div><div class="helper">станции Wi‑Fi</div></div><div class="iconbox">STA</div></div>
+          <div class="metric"><div><div class="label">BLE</div><div id="metricBle" class="value">0</div><div class="helper">bluetooth low energy</div></div><div class="iconbox">BLE</div></div>
+          <div class="metric"><div><div class="label">Связи</div><div id="metricLinks" class="value">0</div><div class="helper">STA → AP подтверждено</div></div><div class="iconbox">LINK</div></div>
+        </div>
+
+        <div class="controls-row">
+          <div class="search-wrap"><input id="searchInput" type="text" placeholder="Поиск по SSID, имени BLE или MAC" /></div>
+          <button id="toggleBleBtn" class="button-active">Скрыть BLE</button>
+          <div class="hint">Клик по AP → связанные станции · колесо/кнопки → масштаб</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="overviewSection" class="card">
+      <div class="graph-shell">
+        <div class="graph-header">
+          <div>
+            <div class="graph-title">Карта радиосреды</div>
+            <div class="graph-subtitle">Нажмите на точку доступа, чтобы открыть отдельную схему её связей. BLE-устройства тоже показаны на общем графе.</div>
+          </div>
+          <div class="chip-row">
+            <div class="chip">Центр = анализатор</div>
+            <div class="chip">Ближе = сильнее RSSI</div>
+            <div class="chip">Дальше = слабее RSSI</div>
+            <div class="chip">AP — синий</div>
+            <div class="chip">BLE — фиолетовый</div>
+          </div>
+        </div>
+
+        <div class="viewport-controls">
+          <div class="muted">Перетаскивайте поле мышью для панорамирования</div>
+          <div style="flex:1"></div>
+          <button id="overviewZoomOut">−</button>
+          <div id="overviewZoomLabel" style="width:60px;text-align:center;font-weight:600">1.0×</div>
+          <button id="overviewZoomIn">+</button>
+          <button id="overviewReset">⟲</button>
+        </div>
+
+        <div id="overviewViewport" class="viewport-wrap"></div>
+      </div>
+    </section>
+
+    <section id="segmentSection" class="card section-hidden">
+      <div class="graph-shell">
+        <div class="graph-header">
+          <div>
+            <div class="graph-title">Схема связей выбранной AP</div>
+            <div class="graph-subtitle">Точка доступа в центре. Клиенты расположены по относительной близости к анализатору на основе RSSI.</div>
+          </div>
+          <div class="controls-row">
+            <div id="segmentBadge" class="pill"></div>
+            <button id="backBtn">← Назад к обзору</button>
+          </div>
+        </div>
+
+        <div class="viewport-controls">
+          <div class="muted">Перетаскивайте поле мышью для панорамирования</div>
+          <div style="flex:1"></div>
+          <button id="segmentZoomOut">−</button>
+          <div id="segmentZoomLabel" style="width:60px;text-align:center;font-weight:600">1.0×</div>
+          <button id="segmentZoomIn">+</button>
+          <button id="segmentReset">⟲</button>
+        </div>
+
+        <div id="segmentViewport" class="viewport-wrap"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-header">
+        <div class="card-title">Устройства</div>
+        <div class="graph-subtitle">Сортированные списки обнаруженных устройств и их текущие параметры.</div>
+      </div>
+      <div class="card-body">
+        <div class="tabs">
+          <button class="tab-btn active" data-tab="ap">AP</button>
+          <button class="tab-btn" data-tab="sta">STA</button>
+          <button class="tab-btn" data-tab="ble">BLE</button>
+        </div>
+        <div id="tab-ap"></div>
+        <div id="tab-sta" class="section-hidden"></div>
+        <div id="tab-ble" class="section-hidden"></div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const BRAND = '#3b82f6';
+    const AP_STROKE = BRAND;
+    const BLE_STROKE = '#a78bfa';
+    const STA_STROKE = '#94a3b8';
+
+    const sampleXml = `<?xml version="1.0" encoding="utf-8"?>
+<ArrayOfXmlTransferTextLine>
+  <XmlTransferTextLine TimeStamp="2026-04-15T11:12:10.1200000+03:00" Direction="Rx" Text="Точка доступа: OfficeNet-Guest     RSSI: -61, MAC: 3C:84:6A:11:22:33" Length="69" />
+  <XmlTransferTextLine TimeStamp="2026-04-15T11:12:10.2100000+03:00" Direction="Rx" Text="Точка доступа: OfficeNet-Main      RSSI: -64, MAC: 3C:84:6A:11:22:34" Length="69" />
+  <XmlTransferTextLine TimeStamp="2026-04-15T11:12:10.2900000+03:00" Direction="Rx" Text="Точка доступа: Warehouse-AP        RSSI: -78, MAC: 50:2F:9B:44:55:66" Length="69" />
+  <XmlTransferTextLine TimeStamp="2026-04-15T11:12:10.3700000+03:00" Direction="Rx" Text="Точка доступа: MeetingRoom         RSSI: -72, MAC: 94:A6:7E:77:88:99" Length="69" />
+  <XmlTransferTextLine TimeStamp="2026-04-15T11:12:14.1100000+03:00" Direction="Rx" Text="MAC станции: 10:AB:CD:20:30:40, RSSI: -62 dBm, Linked-BSSID: 3C:84:6A:11:22:34, Linked-SSID: OfficeNet-Main, Тип пакета: Данные" Length="119" />
+  <XmlTransferTextLine TimeStamp="2026-04-15T11:12:14.2800000+03:00" Direction="Rx" Text="MAC станции: B8:27:EB:91:12:13, RSSI: -70 dBm, Linked-BSSID: 3C:84:6A:11:22:34, Linked-SSID: OfficeNet-Main, Тип пакета: Данные" Length="119" />
+  <XmlTransferTextLine TimeStamp="2026-04-15T11:12:14.4500000+03:00" Direction="Rx" Text="MAC станции: 44:38:39:AA:BB:CC, RSSI: -80 dBm, Linked-BSSID: 50:2F:9B:44:55:66, Linked-SSID: Warehouse-AP, Тип пакета: Данные" Length="119" />
+  <XmlTransferTextLine TimeStamp="2026-04-15T11:12:14.6300000+03:00" Direction="Rx" Text="MAC станции: 8C:85:90:DD:EE:01, RSSI: -74 dBm, Linked-BSSID: 94:A6:7E:77:88:99, Linked-SSID: MeetingRoom, Тип пакета: Данные" Length="119" />
+  <XmlTransferTextLine TimeStamp="2026-04-15T11:12:15.0200000+03:00" Direction="Rx" Text="MAC станции: 70:F1:A1:02:03:04, RSSI: -87 dBm, Linked-BSSID: FF:FF:FF:FF:FF:FF, Linked-SSID: Unknown, Тип пакета: Управляющий" Length="125" />
+  <XmlTransferTextLine TimeStamp="2026-04-15T11:12:18.5400000+03:00" Direction="Rx" Text="BLE адрес: D2:18:5F:9A:01:11, Имя: Beacon A        , RSSI: -66 dBm" Length="65" />
+  <XmlTransferTextLine TimeStamp="2026-04-15T11:12:18.7100000+03:00" Direction="Rx" Text="BLE адрес: E4:2B:6C:AF:22:33, Имя: Headphones X    , RSSI: -79 dBm" Length="65" />
+  <XmlTransferTextLine TimeStamp="2026-04-15T11:12:18.9300000+03:00" Direction="Rx" Text="BLE адрес: F6:3D:7A:BC:44:55, Имя: Tracker Tag     , RSSI: -88 dBm" Length="65" />
+</ArrayOfXmlTransferTextLine>`;
+
+    const state = {
+      rawText: '',
+      parsed: null,
+      search: '',
+      showBle: true,
+      selectedApMac: null,
+      activeTab: 'ap',
+      overviewZoom: 1,
+      overviewPan: { x: 0, y: 0 },
+      segmentZoom: 1,
+      segmentPan: { x: 0, y: 0 },
+    };
+
+    function normalizeText(raw) {
+      if (!raw) return '';
+      return raw.replace(/\u0000/g, '').replace(/\r/g, '\n');
+    }
+
+    function decodeXmlEntities(text) {
+      if (!text) return '';
+      return text
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'");
+    }
+
+    function parseXmlTransferLines(raw) {
+      const rows = [];
+      const regex = /<XmlTransferTextLine\s+([^>]*?)\/>/g;
+      let match;
+      while ((match = regex.exec(raw)) !== null) {
+        const attrs = match[1];
+        const getAttr = (name) => {
+          const re = new RegExp(name + '="([\\s\\S]*?)"');
+          const m = attrs.match(re);
+          return m ? decodeXmlEntities(m[1]) : '';
+        };
+        rows.push({
+          timestamp: getAttr('TimeStamp'),
+          direction: getAttr('Direction'),
+          text: getAttr('Text'),
+          length: Number(getAttr('Length') || 0),
+        });
+      }
+      return rows;
+    }
+
+    function proximityLabel(rssi) {
+      if (rssi >= -58) return 'Очень близко';
+      if (rssi >= -66) return 'Близко';
+      if (rssi >= -74) return 'Средне';
+      if (rssi >= -84) return 'Далеко';
+      return 'Очень далеко';
+    }
+
+    function normRssi(rssi, min = -100, max = -45) {
+      if (typeof rssi !== 'number' || Number.isNaN(rssi)) return 0;
+      return Math.max(0, Math.min(1, (rssi - min) / (max - min)));
+    }
+
+    function radialDistance(rssi, near = 120, far = 340) {
+      const t = normRssi(rssi);
+      return far - t * (far - near);
+    }
+
+    function nodeRadius(rssi, min = 9, max = 20) {
+      const t = normRssi(rssi);
+      return min + (max - min) * t;
+    }
+
+    function prettifyPacketType(type) {
+      if (!type) return '—';
+      if (/управ/i.test(type)) return 'Управляющий';
+      if (/дан/i.test(type)) return 'Данные';
+      return type;
+    }
+
+    function parseLog(raw) {
+      const text = normalizeText(raw);
+      const isXml = /<ArrayOfXmlTransferTextLine[\s>]/.test(text) || /<XmlTransferTextLine\s/.test(text);
+      const rows = isXml
+        ? parseXmlTransferLines(text)
+        : text.split('\n').map((line) => ({ timestamp: '', direction: '', text: line.trim(), length: line.length }));
+
+      const apRegex = /^Точка доступа:\s*(.+?)\s+RSSI:\s*(-?\d+)\s*,\s*MAC:\s*([0-9A-F:]{17})$/i;
+      const staRegex = /^MAC станции:\s*([0-9A-F:]{17}),\s*RSSI:\s*(-?\d+)\s*dBm,\s*Linked-BSSID:\s*([0-9A-F:]{17}),\s*Linked-SSID:\s*(.*?),\s*Тип пакета:\s*(.+)$/i;
+      const bleAddressRegex = /^BLE адрес:\s*([0-9A-F:]{2}(?::[0-9A-F:]{2}){5}),\s*Имя:\s*(.*?),\s*RSSI:\s*(-?\d+)\s*dBm$/i;
+      const bleGenericRegex = /(?:BLE|Bluetooth).*?MAC[:\s]+([0-9A-F:]{17}).*?RSSI[:\s]+(-?\d+)/i;
+
+      const aps = new Map();
+      const stas = new Map();
+      const bles = new Map();
+
+      function upsertAp(mac, name, rssi, time, synthetic = false) {
+        const existing = aps.get(mac) || { id: mac, mac, type: 'ap', name, ssid: name, sightings: 0, bestRssi: -999, firstSeen: time, lastSeen: time, synthetic };
+        existing.sightings += 1;
+        existing.rssi = rssi;
+        existing.bestRssi = Math.max(existing.bestRssi, rssi);
+        existing.firstSeen = existing.firstSeen || time;
+        existing.lastSeen = time || existing.lastSeen;
+        if (name && name !== '<hidden>') { existing.name = name; existing.ssid = name; }
+        aps.set(mac, existing);
+      }
+
+      function upsertSta(mac, rssi, linkedBssid, linkedSsid, packetType, time) {
+        const existing = stas.get(mac) || { id: mac, mac, type: 'sta', name: mac, sightings: 0, bestRssi: -999, firstSeen: time, lastSeen: time, linkedBssid, linkedSsid, packetType, packetTypes: new Set() };
+        existing.sightings += 1;
+        existing.rssi = rssi;
+        existing.bestRssi = Math.max(existing.bestRssi, rssi);
+        existing.firstSeen = existing.firstSeen || time;
+        existing.lastSeen = time || existing.lastSeen;
+        existing.linkedBssid = linkedBssid;
+        existing.linkedSsid = linkedSsid;
+        existing.packetType = packetType || existing.packetType;
+        if (packetType) existing.packetTypes.add(packetType);
+        if (linkedSsid && linkedSsid !== 'Unknown') existing.name = linkedSsid;
+        stas.set(mac, existing);
+      }
+
+      function upsertBle(mac, rssi, name, time) {
+        const existing = bles.get(mac) || { id: mac, mac, type: 'ble', name: name || mac, sightings: 0, bestRssi: -999, firstSeen: time, lastSeen: time };
+        existing.sightings += 1;
+        existing.rssi = rssi;
+        existing.bestRssi = Math.max(existing.bestRssi, rssi);
+        existing.firstSeen = existing.firstSeen || time;
+        existing.lastSeen = time || existing.lastSeen;
+        const safeName = (name || '').trim();
+        if (safeName && !/^неизвест/i.test(safeName)) existing.name = safeName;
+        bles.set(mac, existing);
+      }
+
+      for (const row of rows) {
+        const line = (row.text || '').trim();
+        if (!line) continue;
+        const time = row.timestamp || '';
+
+        const apMatch = line.match(apRegex);
+        if (apMatch) { upsertAp(apMatch[3], apMatch[1].trim(), Number(apMatch[2]), time); continue; }
+
+        const staMatch = line.match(staRegex);
+        if (staMatch) { upsertSta(staMatch[1], Number(staMatch[2]), staMatch[3], staMatch[4].trim(), staMatch[5].trim(), time); continue; }
+
+        const bleAddress = line.match(bleAddressRegex);
+        if (bleAddress) { upsertBle(bleAddress[1].toUpperCase(), Number(bleAddress[3]), bleAddress[2], time); continue; }
+
+        const bleGeneric = line.match(bleGenericRegex);
+        if (bleGeneric) { upsertBle(bleGeneric[1].toUpperCase(), Number(bleGeneric[2]), bleGeneric[1], time); continue; }
+      }
+
+      for (const sta of stas.values()) {
+        if (!sta.linkedBssid || /^FF:FF:FF:FF:FF:FF$/i.test(sta.linkedBssid)) continue;
+        if (!aps.has(sta.linkedBssid)) {
+          upsertAp(sta.linkedBssid, sta.linkedSsid && sta.linkedSsid !== 'Unknown' ? sta.linkedSsid : 'Unknown AP', -95, sta.firstSeen, true);
+        }
+      }
+
+      const apList = [...aps.values()].map((x) => ({ ...x, proximity: proximityLabel(x.rssi) })).sort((a, b) => (b.rssi ?? -999) - (a.rssi ?? -999));
+      const staList = [...stas.values()].map((x) => ({ ...x, packetTypes: [...x.packetTypes], isLinked: !!x.linkedBssid && !/^FF:FF:FF:FF:FF:FF$/i.test(x.linkedBssid), proximity: proximityLabel(x.rssi), packetTypeNice: prettifyPacketType(x.packetType) })).sort((a, b) => (b.rssi ?? -999) - (a.rssi ?? -999));
+      const bleList = [...bles.values()].map((x) => ({ ...x, proximity: proximityLabel(x.rssi) })).sort((a, b) => (b.rssi ?? -999) - (a.rssi ?? -999));
+      const segments = apList.map((ap) => ({ ap, clients: staList.filter((s) => s.linkedBssid === ap.mac) })).sort((a, b) => (b.ap.rssi ?? -999) - (a.ap.rssi ?? -999));
+
+      return { raw: text, isXml, apList, staList, bleList, segments };
+    }
+
+    function filteredApList() {
+      return state.parsed.apList.filter((ap) => `${ap.name} ${ap.mac}`.toLowerCase().includes(state.search.toLowerCase()));
+    }
+
+    function filteredBleList() {
+      return state.parsed.bleList.filter((ble) => `${ble.name} ${ble.mac}`.toLowerCase().includes(state.search.toLowerCase()));
+    }
+
+    function selectedSegment() {
+      if (!state.selectedApMac) return null;
+      return state.parsed.segments.find((s) => s.ap.mac === state.selectedApMac) || null;
+    }
+
+    function buildTable(container, rows, columns, emptyText) {
+      const wrap = document.createElement('div');
+      wrap.className = 'table-shell';
+      wrap.style.setProperty('--cols', columns.length);
+
+      const head = document.createElement('div');
+      head.className = 'table-head';
+      head.style.setProperty('--cols', columns.length);
+      columns.forEach((col) => {
+        const cell = document.createElement('div');
+        cell.textContent = col.label;
+        head.appendChild(cell);
+      });
+      wrap.appendChild(head);
+
+      const scroll = document.createElement('div');
+      scroll.className = 'table-scroll';
+
+      if (!rows.length) {
+        const empty = document.createElement('div');
+        empty.className = 'empty';
+        empty.textContent = emptyText;
+        scroll.appendChild(empty);
+      } else {
+        rows.forEach((row, idx) => {
+          const tr = document.createElement('div');
+          tr.className = 'table-row';
+          tr.style.setProperty('--cols', columns.length);
+          columns.forEach((col) => {
+            const td = document.createElement('div');
+            td.textContent = col.render ? col.render(row) : (row[col.key] ?? '');
+            tr.appendChild(td);
+          });
+          scroll.appendChild(tr);
+        });
+      }
+
+      wrap.appendChild(scroll);
+      container.innerHTML = '';
+      container.appendChild(wrap);
+    }
+
+    function renderMetrics() {
+      document.getElementById('metricAp').textContent = state.parsed.apList.length;
+      document.getElementById('metricSta').textContent = state.parsed.staList.length;
+      document.getElementById('metricBle').textContent = state.parsed.bleList.length;
+      document.getElementById('metricLinks').textContent = state.parsed.staList.filter((s) => s.isLinked).length;
+      document.getElementById('toggleBleBtn').textContent = state.showBle ? 'Скрыть BLE' : 'Показать BLE';
+      document.getElementById('toggleBleBtn').className = state.showBle ? 'button-active' : 'button-brand-outline';
+    }
+
+    function renderOverviewGraph() {
+      const viewport = document.getElementById('overviewViewport');
+      const width = 1200;
+      const height = 610;
+      const cx = width / 2;
+      const cy = height / 2;
+      const rings = [130, 190, 250, 310, 370];
+      const aps = filteredApList();
+      const bles = state.showBle ? filteredBleList() : [];
+
+      const apNodes = aps.map((ap, idx) => {
+        const angle = -Math.PI / 2 + (idx / Math.max(aps.length, 1)) * Math.PI * 2;
+        const radius = radialDistance(ap.rssi, 130, 360);
+        return { ...ap, x: cx + Math.cos(angle) * radius, y: cy + Math.sin(angle) * radius };
+      });
+      const bleNodes = bles.map((ble, idx) => {
+        const angle = -Math.PI / 2 + (idx / Math.max(bles.length, 1)) * Math.PI * 2 + 0.08;
+        const radius = radialDistance(ble.rssi, 150, 390);
+        return { ...ble, x: cx + Math.cos(angle) * radius, y: cy + Math.sin(angle) * radius };
+      });
+
+      document.getElementById('overviewZoomLabel').textContent = state.overviewZoom.toFixed(1) + '×';
+      viewport.classList.toggle('dragging', !!viewport.dataset.dragging);
+      viewport.innerHTML = `
+        <svg viewBox="0 0 ${width} ${height}">
+          <g transform="translate(${state.overviewPan.x} ${state.overviewPan.y}) scale(${state.overviewZoom})">
+            ${rings.map((r) => `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#253447" stroke-dasharray="5 8" />`).join('')}
+            
+            ${apNodes.map((n) => `
+              <g data-ap-mac="${n.mac}" style="cursor:pointer">
+                <line x1="${cx}" y1="${cy}" x2="${n.x}" y2="${n.y}" stroke="#34465d" stroke-width="1.4" />
+                <circle cx="${n.x}" cy="${n.y}" r="${nodeRadius(n.rssi,12,22)}" fill="#111a25" stroke="${state.selectedApMac === n.mac ? BRAND : AP_STROKE}" stroke-width="${state.selectedApMac === n.mac ? 3 : 2}" />
+                <text x="${n.x}" y="${n.y + 3}" text-anchor="middle" fill="#e7f0f8" font-size="10" font-weight="700">AP</text>
+                <text x="${n.x}" y="${n.y + 30}" text-anchor="middle" fill="#c6d3df" font-size="11" font-weight="600">${escapeHtml((n.name || n.mac).slice(0,18))}</text>
+                <text x="${n.x}" y="${n.y + 45}" text-anchor="middle" fill="#8799ac" font-size="10">${n.rssi} dBm</text>
+              </g>
+            `).join('')}
+            ${bleNodes.map((n) => `
+              <g>
+                <line x1="${cx}" y1="${cy}" x2="${n.x}" y2="${n.y}" stroke="#253447" stroke-width="1" />
+                <circle cx="${n.x}" cy="${n.y}" r="${nodeRadius(n.rssi,8,14)}" fill="#111a25" stroke="${BLE_STROKE}" stroke-width="1.8" />
+                <text x="${n.x}" y="${n.y + 3}" text-anchor="middle" fill="#c6d3df" font-size="8" font-weight="700">BLE</text>
+              </g>
+            `).join('')}
+            <g>
+              <circle cx="${cx}" cy="${cy}" r="58" fill="#111a25" stroke="${BRAND}" stroke-width="2.5" />
+              <text x="${cx}" y="${cy - 2}" text-anchor="middle" fill="#e7f0f8" font-size="15" font-weight="700">LES24</text>
+              <text x="${cx}" y="${cy + 17}" text-anchor="middle" fill="#8799ac" font-size="11">Analyzer</text>
+            </g>
+          </g>
+        </svg>`;
+
+      viewport.querySelectorAll('[data-ap-mac]').forEach((el) => {
+        el.addEventListener('click', () => {
+          state.selectedApMac = el.getAttribute('data-ap-mac');
+          render();
+        });
+      });
+    }
+
+    function renderSegmentGraph() {
+      const segment = selectedSegment();
+      const viewport = document.getElementById('segmentViewport');
+      if (!segment) return;
+      const width = 1200;
+      const height = 620;
+      const cx = width / 2;
+      const cy = height / 2;
+      const rings = [130, 190, 250, 310, 370];
+      const positions = segment.clients.map((client, idx) => {
+        const angle = -Math.PI / 2 + (idx / Math.max(segment.clients.length, 1)) * Math.PI * 2;
+        const radius = radialDistance(client.rssi, 150, 360);
+        return { ...client, x: cx + Math.cos(angle) * radius, y: cy + Math.sin(angle) * radius };
+      });
+
+      document.getElementById('segmentBadge').textContent = segment.ap.name;
+      document.getElementById('segmentZoomLabel').textContent = state.segmentZoom.toFixed(1) + '×';
+      viewport.classList.toggle('dragging', !!viewport.dataset.dragging);
+      viewport.innerHTML = `
+        <svg viewBox="0 0 ${width} ${height}">
+          <g transform="translate(${state.segmentPan.x} ${state.segmentPan.y}) scale(${state.segmentZoom})">
+            ${rings.map((r) => `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#253447" stroke-dasharray="5 8" />`).join('')}
+            <circle cx="${cx}" cy="${cy}" r="${Math.max(34, nodeRadius(segment.ap.rssi,24,34))}" fill="#111a25" stroke="${BRAND}" stroke-width="3" />
+            <text x="${cx}" y="${cy + 4}" text-anchor="middle" fill="#e7f0f8" font-size="12" font-weight="700">AP</text>
+            <text x="${cx}" y="${cy + 58}" text-anchor="middle" fill="#e7f0f8" font-size="14" font-weight="600">${escapeHtml(segment.ap.name)}</text>
+            <text x="${cx}" y="${cy + 78}" text-anchor="middle" fill="#8799ac" font-size="12">${segment.ap.rssi} dBm · ${escapeHtml(segment.ap.proximity)}</text>
+            ${positions.map((c) => `<line x1="${cx}" y1="${cy}" x2="${c.x}" y2="${c.y}" stroke="#34465d" stroke-width="1.3" />`).join('')}
+            ${positions.map((c) => `
+              <g>
+                <circle cx="${c.x}" cy="${c.y}" r="${nodeRadius(c.rssi,10,18)}" fill="#111a25" stroke="${STA_STROKE}" stroke-width="1.8" />
+                <text x="${c.x}" y="${c.y + 3}" text-anchor="middle" fill="#e7f0f8" font-size="9" font-weight="700">STA</text>
+                <text x="${c.x}" y="${c.y + 28}" text-anchor="middle" fill="#c6d3df" font-size="10">${escapeHtml(c.mac.slice(-8))}</text>
+                <text x="${c.x}" y="${c.y + 44}" text-anchor="middle" fill="#8799ac" font-size="10">${c.rssi} dBm</text>
+              </g>
+            `).join('')}
+          </g>
+        </svg>`;
+    }
+
+    function escapeHtml(v) {
+      return String(v)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function renderTables() {
+      buildTable(document.getElementById('tab-ap'), state.parsed.apList, [
+        { key: 'name', label: 'SSID / Имя' },
+        { key: 'mac', label: 'MAC' },
+        { key: 'rssi', label: 'RSSI', render: (row) => `${row.rssi} dBm` },
+        { key: 'proximity', label: 'Близость' },
+        { key: 'sightings', label: 'Повторы' },
+      ], 'Точки доступа не найдены.');
+
+      buildTable(document.getElementById('tab-sta'), state.parsed.staList, [
+        { key: 'mac', label: 'MAC станции' },
+        { key: 'rssi', label: 'RSSI', render: (row) => `${row.rssi} dBm` },
+        { key: 'linkedSsid', label: 'Связанный AP', render: (row) => row.isLinked ? (row.linkedSsid || row.linkedBssid || '—') : 'Нет подтверждённой связи' },
+        { key: 'packetTypeNice', label: 'Тип пакета' },
+        { key: 'proximity', label: 'Близость' },
+      ], 'Станции не найдены.');
+
+      buildTable(document.getElementById('tab-ble'), state.parsed.bleList, [
+        { key: 'name', label: 'Имя / Идентификатор' },
+        { key: 'mac', label: 'MAC' },
+        { key: 'rssi', label: 'RSSI', render: (row) => `${row.rssi} dBm` },
+        { key: 'proximity', label: 'Близость' },
+        { key: 'sightings', label: 'Повторы' },
+      ], 'BLE-устройства не найдены.');
+    }
+
+    function renderTabs() {
+      document.querySelectorAll('.tab-btn').forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset.tab === state.activeTab);
+      });
+      ['ap','sta','ble'].forEach((tab) => {
+        document.getElementById('tab-' + tab).classList.toggle('section-hidden', state.activeTab !== tab);
+      });
+    }
+
+    function renderSections() {
+      const seg = selectedSegment();
+      document.getElementById('overviewSection').classList.toggle('section-hidden', !!seg);
+      document.getElementById('segmentSection').classList.toggle('section-hidden', !seg);
+    }
+
+    function setupViewportDragging(elementId, panKey) {
+      const el = document.getElementById(elementId);
+      let dragStart = null;
+      el.onmousedown = (e) => {
+        const target = e.target;
+        if (target && typeof target.closest === 'function' && target.closest('[data-ap-mac]')) {
+          return;
+        }
+        dragStart = { x: e.clientX, y: e.clientY, panX: state[panKey].x, panY: state[panKey].y };
+        el.dataset.dragging = '1';
+      };
+      window.addEventListener('mousemove', (e) => {
+        if (!dragStart) return;
+        state[panKey] = { x: dragStart.panX + (e.clientX - dragStart.x), y: dragStart.panY + (e.clientY - dragStart.y) };
+        render();
+      });
+      window.addEventListener('mouseup', () => {
+        if (!dragStart) return;
+        dragStart = null;
+        delete el.dataset.dragging;
+        render();
+      });
+    }
+
+    function render() {
+      state.parsed = parseLog(state.rawText);
+      renderMetrics();
+      renderSections();
+      renderOverviewGraph();
+      if (selectedSegment()) renderSegmentGraph();
+      renderTables();
+      renderTabs();
+    }
+
+    document.getElementById('openBtn').addEventListener('click', () => document.getElementById('fileInput').click());
+    document.getElementById('sampleBtn').addEventListener('click', () => {
+      state.rawText = sampleXml;
+      state.selectedApMac = null;
+      render();
+    });
+    document.getElementById('fileInput').addEventListener('change', async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      state.rawText = await file.text();
+      state.selectedApMac = null;
+      render();
+    });
+    document.getElementById('searchInput').addEventListener('input', (e) => {
+      state.search = e.target.value || '';
+      render();
+    });
+    document.getElementById('toggleBleBtn').addEventListener('click', () => {
+      state.showBle = !state.showBle;
+      render();
+    });
+    document.getElementById('backBtn').addEventListener('click', () => {
+      state.selectedApMac = null;
+      render();
+    });
+
+    document.getElementById('overviewZoomOut').addEventListener('click', () => { state.overviewZoom = Math.max(0.6, +(state.overviewZoom - 0.2).toFixed(1)); render(); });
+    document.getElementById('overviewZoomIn').addEventListener('click', () => { state.overviewZoom = Math.min(3, +(state.overviewZoom + 0.2).toFixed(1)); render(); });
+    document.getElementById('overviewReset').addEventListener('click', () => { state.overviewZoom = 1; state.overviewPan = { x: 0, y: 0 }; render(); });
+    document.getElementById('segmentZoomOut').addEventListener('click', () => { state.segmentZoom = Math.max(0.6, +(state.segmentZoom - 0.2).toFixed(1)); render(); });
+    document.getElementById('segmentZoomIn').addEventListener('click', () => { state.segmentZoom = Math.min(3, +(state.segmentZoom + 0.2).toFixed(1)); render(); });
+    document.getElementById('segmentReset').addEventListener('click', () => { state.segmentZoom = 1; state.segmentPan = { x: 0, y: 0 }; render(); });
+
+    document.querySelectorAll('.tab-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        state.activeTab = btn.dataset.tab;
+        renderTabs();
+      });
+    });
+
+    setupViewportDragging('overviewViewport', 'overviewPan');
+    setupViewportDragging('segmentViewport', 'segmentPan');
+    render();
+  </script>
+
+<script>
+(function () {
+  const hero = document.querySelector('.hero');
+  if (hero && !document.getElementById('liveBridgeBadge')) {
+    const badge = document.createElement('div');
+    badge.id = 'liveBridgeBadge';
+    badge.className = 'hero-chip';
+    badge.textContent = 'OFFLINE';
+    badge.style.alignSelf = 'flex-start';
+    hero.appendChild(badge);
+  }
+
+  window.LES24_setRawText = function(raw, liveMode) {
+    const selectedBefore = liveMode ? state.selectedApMac : null;
+    state.rawText = raw || '';
+    state.selectedApMac = selectedBefore;
+    const badge = document.getElementById('liveBridgeBadge');
+    if (badge) badge.textContent = liveMode ? 'LIVE · COM' : 'OFFLINE LOG';
+    render();
+    if (state.selectedApMac && !selectedSegment()) {
+      state.selectedApMac = null;
+      render();
+    }
+  };
+
+  window.LES24_setLiveStatus = function(text) {
+    const badge = document.getElementById('liveBridgeBadge');
+    if (badge) badge.textContent = text || 'OFFLINE';
+  };
+})();
+</script>
+
+</body>
+</html>
